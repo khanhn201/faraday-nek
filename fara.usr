@@ -1,0 +1,406 @@
+      include "experimental/lvlSet.f"
+      include "experimental/lserrors.f"
+c-----------------------------------------------------------------------
+      subroutine uservp(ix,iy,iz,eg) ! set variable properties
+      implicit none
+      integer ix,iy,iz,eg,e
+     
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      common /dimen/ Re,We,Fr,charl,udim
+      real Re, We, Fr, charl, udim
+
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
+      real rhol, mul, gdim, gamm
+      real nul, nug
+      real rhog,mug
+      real psi
+      integer icalld
+      save icalld
+      data icalld /0/
+
+      e = gllel(eg)
+
+
+      gdim = 9.81              ! gravity
+      rhol = 998.0             ! density of bottom layer
+      rhog = 826.0             ! density of top layer
+      mul = 0.000998           ! dynamic viscosity of bottom layer
+      mug = 0.002478           ! dynamic viscosity of top layer
+      charl = 0.05             ! height of the bottom layer
+      gamm = 0.018             ! surface tension
+      udim = sqrt(gdim*charl)  ! characteristic velocity
+      udim = omega*magnitude   ! could also be omega*magnitude of the excitation
+
+      nul = mul/rhol 
+      nug = mug/rhog
+      Re = rhol*udim*charl/mul
+      Fr = udim**2.0/(gdim*charl)
+      We = charl*rhol*udim**2.0/gamm
+
+      if(ifield.eq.1)then
+        psi = t(ix,iy,iz,e,ifld_cls-1)
+        psi = max(0.0,psi)
+        psi = min(1.0,psi)
+        utrans = ((1.0-psi)*rhog + psi*rhol)/rhol
+        udiff = ((1.0-psi)*mug + psi*mul)/mul/Re
+        if(istep.le.2)then
+          vtrans0(ix,iy,iz,e) = utrans
+        else
+          vtrans0(ix,iy,iz,e) = rhog/rhol
+        endif
+      else
+        utrans = 1.0
+        udiff = 1e-10
+        if(ifavm(ifield-1))then
+          udiff = 1e-10       !must be tiny for hyperbolic
+        elseif(ifsvv(ifield-1))then
+          udiff = 1e-10      !must be tiny for hyperbolic
+        endif
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,eg) ! set acceleration term
+      implicit none
+      integer ix,iy,iz,eg,e
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
+      common /dimen/ Re,We,Fr,charl,udim
+      real Re,We,Fr, charl, udim
+
+      real sfx,sfy,sfz, fexcite
+
+      real svvx,svvy,svvz
+
+      e = gllel(eg)
+
+      sfx = 0.0
+      sfy = 0.0
+      sfz = 0.0
+      svvx = 0.0
+      svvy = 0.0
+      svvz = 0.0
+
+      call surfacetension(ix,iy,iz,e,1./We,sfx,sfy,sfz)
+      
+      call svv_fluid(ix,iy,iz,e,svvx,svvy,svvz)
+      
+      ! acceleration term from excitation 
+      fexcite =  omega**2*cos(omega*charl/udim*time)
+      fexcite = magnitude*fexcite ! m/s^2
+      fexcite = charl/udim**2*fexcite ! nondimensionalize
+
+      ffx = sfx + svvx
+      ffy = sfy + svvy -1./Fr + fexcite
+      ffz = sfz + svvz
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq(ix,iy,iz,eg) ! set source term
+      implicit none
+      integer ix,iy,iz,eg,e
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+      real signls
+
+      e = gllel(eg)
+      
+      qvol = 0.0
+      avol = 0.0
+
+      call limit_cls(ix,iy,iz,e)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,eg) ! set up boundary conditions
+      implicit none
+      integer ix,iy,iz,iside,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+
+      integer e
+      real yplus
+      real xx,yy,heaviside
+      real y_height
+      real blasius
+
+      e = gllel(eg)
+
+      xx = xm1(ix,iy,iz,e)
+      yy = ym1(ix,iy,iz,e)
+
+      ux   = 0.0
+      uy   = 0.0
+      uz   = 0.0
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric(ix,iy,iz,eg) ! set up initial conditions
+      implicit none
+      integer ix,iy,iz,eg,e
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      real blasius
+
+      real xx,yy, x_max,heaviside, tx,ty, slope
+      real h_local, v_local
+      real phix, phiy
+
+      e = gllel(eg)
+
+      xx = xm1(ix,iy,iz,e)
+      yy = ym1(ix,iy,iz,e)
+
+      x_max = 4.0 ! length of the domain, nondimensionalized
+
+      h_local = 1.0 + 0.01*cos(xx/x_max*2*3.1415)     ! small initial wave
+      h_local = h_local + 0.0001*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
+
+      ux = 0.0
+      uy = 0.0
+      uz = 0.0
+
+      temp = h_local - yy
+
+      if(ifield.eq.ifld_tls .or. ifield.eq.ifld_tlsr)then
+        continue
+      elseif(ifield.eq.ifld_cls .or. ifield.eq.ifld_clsr)then
+        temp = heaviside(ix,iy,iz,e,temp,0.0)
+      endif
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk()
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      real ntlsr, nclsr
+      real pta(3),ptb(3)
+
+      integer ntot,i
+
+      real exact(lx1*ly1*lz1*lelv)
+      save exact
+      real psiini(lx1,ly1,lz1,lelv)
+      save psiini
+      real err
+      
+      real ls_volerr
+
+      real glsum
+      integer pord
+      integer ncut
+      real starttime
+      save starttime
+
+      integer nface, f, e
+      real w(lx1*ly1*lz1),w2(lx1*ly1*lz1)
+
+      ntot = lx1*ly1*lz1*nelv
+
+      
+      if(istep.eq.0)then
+        call copy(psiini,t(1,1,1,1,ifld_cls-1),ntot)
+        call copy(exact,t(1,1,1,1,ifld_tls-1),ntot)
+        do i=1,ntot
+          if(exact(i).ge.0.0)then
+            exact(i) = 1.0
+          else
+            exact(i) = 0.0
+          endif
+        enddo
+      endif
+
+      pord = uparam(3)
+      call extrappr(prext,pr,prlag(1,1,1,1,1),prlag(1,1,1,1,2),pord)
+      ncut = lx1-1
+      if(pord.ne.1) call cut_off_filter(prext,ncut,1)
+
+      ntlsr = uparam(1) !freq of TLS re-distancing
+      nclsr = uparam(2) !freq of CLS re-distancing
+
+      call LS_default_driver(ntlsr,nclsr)
+
+      err = ls_volerr(ifld_cls,exact,psiini)
+      if(nio.eq.0)then 
+        write(*,*)"Volume error",err
+      endif
+
+      if(istep.eq.0)starttime = time
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userqtl ! Set thermal divergence
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat()   ! This routine to modify element vertices
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2()  ! This routine to modify mesh coordinates
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      integer ntot,i
+      real scale
+
+
+      ifld_cls = 2
+      ifld_tls = 3
+      ifld_clsr = 4
+      ifld_tlsr = 5
+
+      ntot = lx1*ly1*lz1*nelv
+      scale = 1.0/0.05  ! Scale the mesh so that the bottom layer's height is 1.0
+      call cmult(xm1, scale, ntot)
+      call cmult(ym1, scale, ntot)
+      call cmult(zm1, scale, ntot)
+      
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3()
+      implicit none
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'SVV'
+      include 'AVM'
+
+      real eps,dt_cls_in,dt_tls_in
+      integer nsteps_cls, nsteps_tls
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr 
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+      integer ifdebug, ifixCLSbdry
+      real farfield
+
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
+      omega = 10.5718 ! s^-1 frequency of excitation
+      magnitude = 0.04474 ! m magnitude of excitation
+
+
+      eps = 1.5/(lx1-1.0)
+      ifdebug = 0
+      ifixCLSbdry = 0
+
+      call ls_init(ifld_cls, ifld_clsr,
+     $             ifld_tls, ifld_tlsr,
+     $             eps, ifdebug, ifixCLSbdry, farfield)
+
+c---------------------------------------------------      
+c     This section to specify user defined parameters
+c     for AVM/SVV. Leave commented to use default parameters
+c     parameters. 
+
+      !fluid
+      svv_c0(1) = 1.0
+      svvcut(1) = (lx1-1.0)/3.0
+
+      ! svv_c0(ifld_cls) = 1.0                 !ifld_cls
+      ! svvcut(ifld_cls) = (lx1-1.0)/2.0-1.0
+      ! svv_k0(1) = 1.5
+      ! svv_k1(1) = 1.5
+      ! ifnlsvv(1) = .true.
+
+      ! avm_c1(1) = 1.0
+      ! avm_ncut(1) = 1.0
+      ! icont(1) = .false.
+      ! ifupwindsvv(ifld_cls) = .true.
+
+c     scalar 2      
+      ! svv_c0(ifld_tls) = 1.0                  !ifld_tls
+      ! svvcut(ifld_tls) = (lx1-1.0)/2.0-1.0
+      ! svv_k0(2) = 1.5
+      ! svv_k1(2) = 1.5
+      ! ifnlsvv(2) = .false.
+      ! ifupwindsvv(ifld_tls) = .true.
+
+c     scalar 3      
+      svv_c0(ifld_clsr) = 1.0                  !ifld_clsr
+      svvcut(ifld_clsr) = (lx1-1.0)/2.0
+      ! svv_k0(3) = 1.5
+      ! svv_k1(3) = 1.5
+      ! ifnlsvv(3) = .false.
+      ! ifupwindsvv(ifld_clsr) = .true.
+
+c     scalar 3      
+      svv_c0(ifld_tlsr) = 2.0                  !ifld_tlsr
+      svvcut(ifld_tlsr) = (lx1-1.0)/2.0
+      if(lx1.gt.7) svvcut(ifld_tlsr) = (lx1-1.0)/3.0
+      ! svv_k0(4) = 1.5
+      ! svv_k1(4) = 1.5
+      ! ifnlsvv(4) = .false.
+      ! ifupwindsvv(ifld_tlsr) = .true.
+
+      return
+      end
+c---------------------------------------------------------------------
