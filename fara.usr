@@ -195,7 +195,7 @@ c-----------------------------------------------------------------------
 
       x_max = 4.0 ! length of the domain, nondimensionalized
 
-      h_local = 1.0 + 0.01*cos(xx/x_max*2*3.1415)     ! small initial wave
+      h_local = 1.0 + 0.1*cos(xx/x_max*2*3.1415)     ! small initial wave
       h_local = h_local + 0.0001*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
