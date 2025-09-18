@@ -1,16 +1,87 @@
+#define INTP_NMAX 1000
+#define NPTS_MAX INTP_NMAX
+
       include "experimental/lvlSet.f"
       include "experimental/lserrors.f"
+c-----------------------------------------------------------------------
+      subroutine my_surface_track
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      real xp(NPTS_MAX), yp(NPTS_MAX), zp(NPTS_MAX), up(NPTS_MAX)
+      integer iwk(INTP_NMAX,3)
+      real rwk(INTP_NMAX,ldim+1)
+
+      real xmax, ymax, zmax, h_surface
+      integer npts, i
+
+      integer ih
+      save ih
+
+      integer icalld
+      save    icalld
+      data    icalld /0/
+
+      xmax = 4.0 ! after nondimensionalization
+      ymax = 3.0
+      zmax = 0.6
+
+      npts = 0
+      if (nid.eq.0) then
+         npts = NPTS_MAX
+
+         do i = 1,npts
+c           define points
+            xp(i) = xmax/2.0
+            yp(i) = real(i-1) / real(npts-1) * ymax
+            zp(i) = zmax/2.0
+         enddo
+      endif
+
+
+      if (icalld.eq.0) then
+        icalld = 1
+        call interp_setup(ih,0.0,0,nelv)
+      endif
+      call interp_nfld(up,t(1,1,1,1,ifld_cls-1),1,
+     $                 xp,yp,zp,npts,
+     $                 iwk,rwk,INTP_NMAX,
+     $                 .true.,ih) ! T = relocate points
+
+c     find the surface up(i) = 0.5
+      h_surface = 0.0
+      if (nid.eq.0) then
+         do i = 1,npts
+             if (up(i-1) .gt. 0.5 .and. up(i) .le. 0.5) then
+c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i))
+             h_surface = yp(i-1) +
+     $            (0.5 - up(i-1)) * (yp(i) - yp(i-1)) /
+     $            (up(i) - up(i-1))
+                 exit
+             endif
+         enddo
+         write(*,*)"Surface height",h_surface
+      endif
+
+      return
+      end
 c-----------------------------------------------------------------------
       subroutine uservp(ix,iy,iz,eg) ! set variable properties
       implicit none
       integer ix,iy,iz,eg,e
-     
+
       include 'SIZE'
       include 'TOTAL'
       include 'NEKUSE'
 
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
@@ -41,7 +112,7 @@ c-----------------------------------------------------------------------
       udim = sqrt(gdim*charl)  ! characteristic velocity
       udim = omega*magnitude   ! could also be omega*magnitude of the excitation
 
-      nul = mul/rhol 
+      nul = mul/rhol
       nug = mug/rhog
       Re = rhol*udim*charl/mul
       Fr = udim**2.0/(gdim*charl)
@@ -99,10 +170,10 @@ c-----------------------------------------------------------------------
       svvz = 0.0
 
       call surfacetension(ix,iy,iz,e,1./We,sfx,sfy,sfz)
-      
+
       call svv_fluid(ix,iy,iz,e,svvx,svvy,svvz)
-      
-      ! acceleration term from excitation 
+
+      ! acceleration term from excitation
       fexcite =  omega**2*cos(omega*charl/udim*time)
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
@@ -122,13 +193,13 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
       real signls
 
       e = gllel(eg)
-      
+
       qvol = 0.0
       avol = 0.0
 
@@ -145,7 +216,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'NEKUSE'
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
@@ -178,7 +249,7 @@ c-----------------------------------------------------------------------
       include 'NEKUSE'
 
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
@@ -209,7 +280,7 @@ c-----------------------------------------------------------------------
       elseif(ifield.eq.ifld_cls .or. ifield.eq.ifld_clsr)then
         temp = heaviside(ix,iy,iz,e,temp,0.0)
       endif
-      
+
       return
       end
 c-----------------------------------------------------------------------
@@ -219,7 +290,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
@@ -233,7 +304,7 @@ c-----------------------------------------------------------------------
       real psiini(lx1,ly1,lz1,lelv)
       save psiini
       real err
-      
+
       real ls_volerr
 
       real glsum
@@ -247,7 +318,8 @@ c-----------------------------------------------------------------------
 
       ntot = lx1*ly1*lz1*nelv
 
-      
+
+      call my_surface_track
       if(istep.eq.0)then
         call copy(psiini,t(1,1,1,1,ifld_cls-1),ntot)
         call copy(exact,t(1,1,1,1,ifld_tls-1),ntot)
@@ -271,7 +343,7 @@ c-----------------------------------------------------------------------
       call LS_default_driver(ntlsr,nclsr)
 
       err = ls_volerr(ifld_cls,exact,psiini)
-      if(nio.eq.0)then 
+      if(nio.eq.0)then
         write(*,*)"Volume error",err
       endif
 
@@ -301,7 +373,7 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
 
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
@@ -319,7 +391,7 @@ c-----------------------------------------------------------------------
       call cmult(xm1, scale, ntot)
       call cmult(ym1, scale, ntot)
       call cmult(zm1, scale, ntot)
-      
+
       return
       end
 c-----------------------------------------------------------------------
@@ -335,7 +407,7 @@ c-----------------------------------------------------------------------
       integer nsteps_cls, nsteps_tls
 
       common /ls_usr/ ifld_cls,ifld_clsr,
-     $                ifld_tls,ifld_tlsr 
+     $                ifld_tls,ifld_tlsr
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
       integer ifdebug, ifixCLSbdry
@@ -356,10 +428,10 @@ c-----------------------------------------------------------------------
      $             ifld_tls, ifld_tlsr,
      $             eps, ifdebug, ifixCLSbdry, farfield)
 
-c---------------------------------------------------      
+c---------------------------------------------------------------------
 c     This section to specify user defined parameters
 c     for AVM/SVV. Leave commented to use default parameters
-c     parameters. 
+c     parameters.
 
       !fluid
       svv_c0(1) = 1.0
@@ -376,7 +448,7 @@ c     parameters.
       ! icont(1) = .false.
       ! ifupwindsvv(ifld_cls) = .true.
 
-c     scalar 2      
+c     scalar 2
       ! svv_c0(ifld_tls) = 1.0                  !ifld_tls
       ! svvcut(ifld_tls) = (lx1-1.0)/2.0-1.0
       ! svv_k0(2) = 1.5
@@ -384,7 +456,7 @@ c     scalar 2
       ! ifnlsvv(2) = .false.
       ! ifupwindsvv(ifld_tls) = .true.
 
-c     scalar 3      
+c     scalar 3
       svv_c0(ifld_clsr) = 1.0                  !ifld_clsr
       svvcut(ifld_clsr) = (lx1-1.0)/2.0
       ! svv_k0(3) = 1.5
@@ -392,7 +464,7 @@ c     scalar 3
       ! ifnlsvv(3) = .false.
       ! ifupwindsvv(ifld_clsr) = .true.
 
-c     scalar 3      
+c     scalar 3
       svv_c0(ifld_tlsr) = 2.0                  !ifld_tlsr
       svvcut(ifld_tlsr) = (lx1-1.0)/2.0
       if(lx1.gt.7) svvcut(ifld_tlsr) = (lx1-1.0)/3.0
