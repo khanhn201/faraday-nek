@@ -1,4 +1,4 @@
-#define INTP_NMAX 1000
+#define INTP_NMAX 3000
 #define NPTS_MAX INTP_NMAX
 
       include "experimental/lvlSet.f"
@@ -174,7 +174,7 @@ c-----------------------------------------------------------------------
       call svv_fluid(ix,iy,iz,e,svvx,svvy,svvz)
 
       ! acceleration term from excitation
-      fexcite =  omega**2*cos(omega*charl/udim*time)
+      fexcite = -omega**2*cos(omega*charl/udim*time)
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
 
@@ -266,7 +266,7 @@ c-----------------------------------------------------------------------
 
       x_max = 4.0 ! length of the domain, nondimensionalized
 
-      h_local = 1.0 + 0.1*cos(xx/x_max*2*3.1415)     ! small initial wave
+      h_local = 1.0 - 0.01*cos(xx/x_max*2*3.1415)     ! small initial wave
       h_local = h_local + 0.0001*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
@@ -297,6 +297,17 @@ c-----------------------------------------------------------------------
       real ntlsr, nclsr
       real pta(3),ptb(3)
 
+      common /dimen/ Re,We,Fr,charl,udim
+      real Re,We,Fr, charl, udim
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
+      real phase
+      real output_phase(6)
+      real prevphase
+      save prevphase
+      data prevphase /0.0/
+
       integer ntot,i
 
       real exact(lx1*ly1*lz1*lelv)
@@ -310,14 +321,11 @@ c-----------------------------------------------------------------------
       real glsum
       integer pord
       integer ncut
-      real starttime
-      save starttime
 
       integer nface, f, e
       real w(lx1*ly1*lz1),w2(lx1*ly1*lz1)
 
       ntot = lx1*ly1*lz1*nelv
-
 
       call my_surface_track
       if(istep.eq.0)then
@@ -347,7 +355,41 @@ c-----------------------------------------------------------------------
         write(*,*)"Volume error",err
       endif
 
-      if(istep.eq.0)starttime = time
+
+      phase = omega*charl/udim*time
+      phase = mod(phase,4.0*pi)/4.0/pi ! omega_m = 0.5*omega_e so period is 4*pi
+      output_phase(1) = 0.0
+      output_phase(2) = 1.0/5.0
+      output_phase(3) = 1.5/5.0
+      output_phase(4) = 2.0/5.0
+      output_phase(5) = 3.0/5.0
+      output_phase(6) = 4.0/5.0
+
+      if(nio.eq.0)then
+        write(*,*)"Phase",phase
+      endif
+      do i = 2,6
+         ! normal crossing
+         if (prevphase .lt. output_phase(i) .and.
+     &       phase     .ge. output_phase(i)) then
+      if(nio.eq.0)then
+             write(*,*)"Dump phase",output_phase(i)
+      endif
+             call outpost(vx,vy,vz,pr,t(1,1,1,1,1),'pha')
+         endif
+      enddo
+
+       ! wrap-around case (phase reset at 1 → 0)
+       if (prevphase .gt. phase) then
+      if(nio.eq.0)then
+             write(*,*)"Dump phase",0.0
+      endif
+           call outpost(vx,vy,vz,pr,t(1,1,1,1,1),'pha')
+       endif
+
+
+
+      prevphase = phase
 
       return
       end
@@ -420,7 +462,7 @@ c-----------------------------------------------------------------------
       magnitude = 0.04474 ! m magnitude of excitation
 
 
-      eps = 1.6/(lx1-1.0)
+      eps = 1.5/(lx1-1.0)
       ifdebug = 0
       ifixCLSbdry = 0
 
