@@ -420,7 +420,7 @@ c-----------------------------------------------------------------------
       magnitude = 0.04474 ! m magnitude of excitation
 
 
-      eps = 1.5/(lx1-1.0)
+      eps = 1.6/(lx1-1.0)
       ifdebug = 0
       ifixCLSbdry = 0
 
@@ -435,7 +435,7 @@ c     parameters.
 
       !fluid
       svv_c0(1) = 1.0
-      svvcut(1) = (lx1-1.0)/3.0
+      svvcut(1) = (lx1-1.0)/2.0
 
       ! svv_c0(ifld_cls) = 1.0                 !ifld_cls
       ! svvcut(ifld_cls) = (lx1-1.0)/2.0-1.0
@@ -466,8 +466,7 @@ c     scalar 3
 
 c     scalar 3
       svv_c0(ifld_tlsr) = 2.0                  !ifld_tlsr
-      svvcut(ifld_tlsr) = (lx1-1.0)/2.0
-      if(lx1.gt.7) svvcut(ifld_tlsr) = (lx1-1.0)/3.0
+      svvcut(ifld_tlsr) = (lx1-1.0)/3.0
       ! svv_k0(4) = 1.5
       ! svv_k1(4) = 1.5
       ! ifnlsvv(4) = .false.
