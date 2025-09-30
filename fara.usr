@@ -174,7 +174,7 @@ c-----------------------------------------------------------------------
       call svv_fluid(ix,iy,iz,e,svvx,svvy,svvz)
 
       ! acceleration term from excitation
-      fexcite = -omega**2*cos(omega*charl/udim*time)
+      fexcite = -omega**2*sin(omega*charl/udim*time)
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
 
