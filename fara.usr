@@ -1,6 +1,11 @@
 #define INTP_NMAX 3000
 #define NPTS_MAX INTP_NMAX
 
+#define INTP_X 160
+#define INTP_Y 120
+#define NPTS_SLICE (INTP_X*INTP_Y)
+
+
       include "experimental/lvlSet.f"
       include "experimental/lserrors.f"
 c-----------------------------------------------------------------------
@@ -71,6 +76,70 @@ c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i)
 
       return
       end
+c-----------------------------------------------------------------------
+      subroutine dump_slice
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      common /ls_usr/ ifld_cls,ifld_clsr,
+     $                ifld_tls,ifld_tlsr
+      integer ifld_cls,ifld_clsr
+      integer ifld_tls,ifld_tlsr
+
+      real xp(NPTS_SLICE), yp(NPTS_SLICE), zp(NPTS_SLICE), up(NPTS_SLICE)
+      integer iwk(NPTS_SLICE,3)
+      real rwk(NPTS_SLICE,ldim+1)
+
+      real xmax, ymax, zmax, h_surface
+      integer npts, i, j, idx
+
+      integer ih
+      save ih
+      character*128 fname
+
+      integer icalld
+      save    icalld
+      data    icalld /0/
+
+      xmax = 4.0 ! after nondimensionalization
+      ymax = 3.0
+      zmax = 0.6
+      npts = 0
+      if (nid.eq.0) then
+         do j = 1, INTP_Y
+            do i = 1, INTP_X
+               idx = (j-1)*INTP_X + i
+               xp(idx) = real(i-1) / real(INTP_X-1) * xmax
+               yp(idx) = real(j-1) / real(INTP_Y-1) * ymax
+               zp(idx) = zmax / 2.0
+            enddo
+         enddo
+         npts = INTP_X * INTP_Y
+      endif
+
+      if (icalld.eq.0) then
+         icalld = 1
+         call interp_setup(ih, 0.0, 0, nelv)
+      endif
+
+      call interp_nfld(up, t(1,1,1,1,ifld_cls-1), 1,
+     $                 xp, yp, zp, npts,
+     $                 iwk, rwk, NPTS_SLICE,
+     $                 .true., ih)
+
+      if (nid.eq.0) then
+         write(fname,'("slice_",I8.8,".txt")') istep
+         open(unit=33, file=fname, status='unknown')
+         write(33,*) npts, time
+         do i = 1, npts
+            write(33,'(3E15.6)') xp(i), yp(i), up(i)
+         enddo
+         close(33)
+      endif
+
+      return
+      end
+
 c-----------------------------------------------------------------------
       subroutine uservp(ix,iy,iz,eg) ! set variable properties
       implicit none
@@ -266,8 +335,8 @@ c-----------------------------------------------------------------------
 
       x_max = 4.0 ! length of the domain, nondimensionalized
 
-      h_local = 1.0 - 0.01*cos(xx/x_max*2*3.1415)     ! small initial wave
-      h_local = h_local + 0.0001*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
+      h_local = 1.0 - 1e-5*cos(xx/x_max*2*3.1415)     ! small initial wave
+      h_local = h_local + 1e-6*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
       uy = 0.0
@@ -372,19 +441,23 @@ c-----------------------------------------------------------------------
          ! normal crossing
          if (prevphase .lt. output_phase(i) .and.
      &       phase     .ge. output_phase(i)) then
-      if(nio.eq.0)then
-             write(*,*)"Dump phase",output_phase(i)
-      endif
+             if(nio.eq.0)then
+                    write(*,*)"Dump phase",output_phase(i)
+             endif
              call outpost(vx,vy,vz,pr,t(1,1,1,1,1),'pha')
          endif
       enddo
 
        ! wrap-around case (phase reset at 1 → 0)
-       if (prevphase .gt. phase) then
-      if(nio.eq.0)then
-             write(*,*)"Dump phase",0.0
-      endif
+      if (prevphase .gt. phase) then
+           if(nio.eq.0)then
+                  write(*,*)"Dump phase",0.0
+           endif
            call outpost(vx,vy,vz,pr,t(1,1,1,1,1),'pha')
+       endif
+
+      if (mod(prevphase,0.05).gt. mod(phase,0.05)) then
+           call dump_slice ! every 1/20 of a period
        endif
 
 
