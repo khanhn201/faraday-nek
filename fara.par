@@ -17,8 +17,8 @@ extrapolation = OIFS
 writeControl = runTime
 writeInterval = 10e-0
 
-userParam01 = 1.0     #Freq of TLSR
-userParam02 = 0.1     #Freq of CLSR
+userParam01 = 0.01     #Freq of TLSR
+userParam02 = 0.001     #Freq of CLSR
 userParam03 = 2    #Pressure extrapolation order
 
 filtering = hpfrt
@@ -66,4 +66,3 @@ density = 1.0
 diffusivity = 1e-8 
 residualTol = 1e-8
 regularization = svv
-
