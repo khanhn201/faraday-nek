@@ -19,7 +19,8 @@ c-----------------------------------------------------------------------
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
-      real xp(NPTS_MAX), yp(NPTS_MAX), zp(NPTS_MAX), up(NPTS_MAX)
+      real xp(NPTS_MAX),yp(NPTS_MAX)
+      real zp(NPTS_MAX),up(NPTS_MAX)
       integer iwk(INTP_NMAX,3)
       real rwk(INTP_NMAX,ldim+1)
 
@@ -86,7 +87,8 @@ c-----------------------------------------------------------------------
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
-      real xp(NPTS_SLICE), yp(NPTS_SLICE), zp(NPTS_SLICE), up(NPTS_SLICE)
+      real xp(NPTS_SLICE), yp(NPTS_SLICE)
+      real zp(NPTS_SLICE), up(NPTS_SLICE)
       integer iwk(NPTS_SLICE,3)
       real rwk(NPTS_SLICE,ldim+1)
 
@@ -247,9 +249,13 @@ c-----------------------------------------------------------------------
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
 
-      ffx = sfx + svvx
-      ffy = sfy + svvy -1./Fr + fexcite
-      ffz = sfz + svvz
+      ffx = svvx
+      ffy = svvy
+      ffz = svvz 
+
+      abfx(ix,iy,iz,e) = sfx
+      abfy(ix,iy,iz,e) = sfy + vtrans(ix,iy,iz,e,1)*(-1./Fr + fexcite) 
+      abfz(ix,iy,iz,e) = sfz
 
       return
       end
