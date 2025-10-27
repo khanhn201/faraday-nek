@@ -13,7 +13,8 @@ h = data(:,2);
 % Plot
 fig = figure;
 % plot(t+97.5, h, 'LineWidth', 1.5, 'DisplayName','Present work');
-plot(t+81.6, h, 'LineWidth', 1.5, 'DisplayName','Present work');
+plot(t+pi*26, h, 'LineWidth', 1.5, 'DisplayName','Present work');
+% plot(t+pi*21.5, h, 'LineWidth', 1.5, 'DisplayName','Present work (smaller IC)');
 xlabel('t');ylabel('h');
 title('Surface Height vs Time');
 grid on;
@@ -25,4 +26,4 @@ plot(dataref(:,1),dataref(:,2)+0.98,'--','LineWidth',1.5, 'DisplayName','Referen
 xlim([100,125]);
 legend('Location','best');
 
-exportgraphics(fig,'plot_height.png','ContentType','vector')
+% exportgraphics(fig,'1026_plot_height.png','ContentType','vector')
