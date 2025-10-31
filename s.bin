@@ -13,11 +13,17 @@
 export OMP_NUM_THREADS=1
 ulimit -s unlimited
 module load cmake
-module load gcc-runtime/11.4.0
+module load gcc-runtime/8.5.0
 module load openmpi/4.1.5+cuda
 module list
 cmake --version
 which mpicc
+
+export NEK_SOURCE_ROOT="/projects/bcla/knguyen16/Nek5000"
+export PATH=$NEK_SOURCE_ROOT/bin:$PATH
+
+PPLIST="HYPRE" makenek
+
 ldd ./nek5000
 export OMP_NUM_THREADS=1
 # Workaround for https://github.com/Nek5000/Nek5000/issues/759
