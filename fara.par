@@ -8,10 +8,10 @@ stopAt = endTime
 #numSteps = 500000 #12000 #1000 #16000 #4000 #400 #400 #200000
 endTime = 1000 #10e-4
 
-dt = 1e-02
+dt = 1e-01
 timeStepper = bdf2 #With bdf2 SF does not work well
 variabledt = yes
-targetCFL = 0.05
+targetCFL = 0.1
 extrapolation = OIFS
 
 writeControl = runTime

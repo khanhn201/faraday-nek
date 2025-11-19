@@ -245,7 +245,7 @@ c-----------------------------------------------------------------------
       svvy = 0.0
       svvz = 0.0
 
-c     call surfacetension(ix,iy,iz,e,1./We,sfx,sfy,sfz)
+      call surfacetension(ix,iy,iz,e,1./We,sfx,sfy,sfz)
 
       call svv_fluid(ix,iy,iz,e,svvx,svvy,svvz)
 
@@ -254,17 +254,18 @@ c     call surfacetension(ix,iy,iz,e,1./We,sfx,sfy,sfz)
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
 
-      ffx = svvx
-      ffy = svvy
-      ffz = svvz 
+c     ffx = svvx
+c     ffy = svvy
+c     ffz = svvz 
 
-      abfx(ix,iy,iz,e) = sfx
-      abfy(ix,iy,iz,e) = sfy + vtrans(ix,iy,iz,e,1)*(-1./Fr + fexcite) 
-      abfz(ix,iy,iz,e) = sfz
+c     abfx(ix,iy,iz,e) = sfx
+c     abfy(ix,iy,iz,e) = sfy + vtrans(ix,iy,iz,e,1)*(-1./Fr + fexcite) 
+c     abfz(ix,iy,iz,e) = sfz
 
       sfx = sfx/vtrans(ix,iy,iz,e,1)
       sfy = sfy/vtrans(ix,iy,iz,e,1)
       sfz = sfz/vtrans(ix,iy,iz,e,1)
+
       ffx = svvx + sfx
       ffy = svvy + sfy -1./Fr + fexcite 
       ffz = svvz + sfz 
@@ -356,8 +357,8 @@ c-----------------------------------------------------------------------
 
       x_max = 4.0 ! length of the domain, nondimensionalized
 
-      h_local = 1.0 - 1e-4*cos(xx/x_max*2*3.1415)     ! small initial wave
-      h_local = h_local + 1e-5*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
+      h_local = 1.0 - 1e-2*cos(xx/x_max*2*3.1415)     ! small initial wave
+      h_local = h_local + 1e-3*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
       uy = 0.0
