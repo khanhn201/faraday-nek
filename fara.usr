@@ -72,7 +72,7 @@ c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i)
                  exit
              endif
          enddo
-         write(*,*)"Surface height",h_surface
+         write(*,*)"Surface height", time, h_surface
       endif
 
       return
