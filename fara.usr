@@ -5,6 +5,7 @@
 #define INTP_Y 120
 #define NPTS_SLICE (INTP_X*INTP_Y)
 
+c  total height = Y_HEIGHT_MAX*0.05
 #define Y_HEIGHT_MAX 3.0
 
       include "experimental/lvlSet.f"
@@ -25,7 +26,7 @@ c-----------------------------------------------------------------------
       integer iwk(INTP_NMAX,3)
       real rwk(INTP_NMAX,ldim+1)
 
-      real xmax, ymax, zmax, h_surface, nondimtime
+      real h_surface, nondimtime
       integer npts, i
 
       integer ih
@@ -40,10 +41,9 @@ c-----------------------------------------------------------------------
 
       common /excite/ omega, magnitude
       real omega, magnitude
+      real xmn,xmx,ymn,ymx,zmn,zmx
 
-      xmax = 4.0 ! after nondimensionalization
-      ymax = Y_HEIGHT_MAX
-      zmax = 0.6
+      call domain_size(xmn,xmx,ymn,ymx,zmn,zmx)
 
       npts = 0
       if (nid.eq.0) then
@@ -51,9 +51,9 @@ c-----------------------------------------------------------------------
 
          do i = 1,npts
 c           define points
-            xp(i) = xmax/2.0
-            yp(i) = real(i-1) / real(npts-1) * ymax
-            zp(i) = zmax/2.0
+            xp(i) = xmx/2.0
+            yp(i) = real(i-1) / real(npts-1) * ymx
+            zp(i) = zmx/2.0
          enddo
       endif
 
@@ -101,7 +101,7 @@ c-----------------------------------------------------------------------
       integer iwk(NPTS_SLICE,3)
       real rwk(NPTS_SLICE,ldim+1)
 
-      real xmax, ymax, zmax, h_surface
+      real h_surface
       integer npts, i, j, idx
 
       integer ih
@@ -116,17 +116,18 @@ c-----------------------------------------------------------------------
       save    idump_count
       data    idump_count /0/
 
-      xmax = 4.0 ! after nondimensionalization
-      ymax = Y_HEIGHT_MAX
-      zmax = 0.6
+      real xmn,xmx,ymn,ymx,zmn,zmx
+
+      call domain_size(xmn,xmx,ymn,ymx,zmn,zmx)
+
       npts = 0
       if (nid.eq.0) then
          do j = 1, INTP_Y
             do i = 1, INTP_X
                idx = (j-1)*INTP_X + i
-               xp(idx) = real(i-1) / real(INTP_X-1) * xmax
-               yp(idx) = real(j-1) / real(INTP_Y-1) * ymax
-               zp(idx) = zmax / 2.0
+               xp(idx) = real(i-1) / real(INTP_X-1) * xmx
+               yp(idx) = real(j-1) / real(INTP_Y-1) * ymx
+               zp(idx) = zmx / 2.0
             enddo
          enddo
          npts = INTP_X * INTP_Y
@@ -355,19 +356,21 @@ c-----------------------------------------------------------------------
 
       real blasius
 
-      real xx,yy, x_max,heaviside, tx,ty, slope
+      real xx,yy,heaviside, tx,ty, slope
       real h_local, v_local
       real phix, phiy
+
+      real xmn,xmx,ymn,ymx,zmn,zmx
+
+      call domain_size(xmn,xmx,ymn,ymx,zmn,zmx)
 
       e = gllel(eg)
 
       xx = xm1(ix,iy,iz,e)
       yy = ym1(ix,iy,iz,e)
 
-      x_max = 4.0 ! length of the domain, nondimensionalized
-
-      h_local = 1.0 - 1e-2*cos(xx/x_max*2*3.1415)     ! small initial wave
-      h_local = h_local + 1e-3*(1.0-2.0*(xx/x_max)) ! small linear perturbation to eliminate symmetry
+      h_local = 1.0 - 1e-2*cos(xx/xmx*2*3.1415)     ! small initial wave
+      h_local = h_local + 1e-3*(1.0-2.0*(xx/xmx)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
       uy = 0.0
@@ -524,7 +527,6 @@ c-----------------------------------------------------------------------
       integer ifld_tls,ifld_tlsr
 
       integer ntot,i
-      real scale
 
 
       ifld_cls = 2
@@ -533,10 +535,9 @@ c-----------------------------------------------------------------------
       ifld_tlsr = 5
 
       ntot = lx1*ly1*lz1*nelv
-      scale = 1.0/0.05  ! Scale the mesh so that the bottom layer's height is 1.0
-      call cmult(xm1, scale, ntot)
-      call cmult(ym1, scale, ntot)
-      call cmult(zm1, scale, ntot)
+      call cmult(ym1, Y_HEIGHT_MAX, ntot) ! scale to Y_HEIGHT_MAX
+      call cmult(xm1, 1.0/0.05, ntot)     ! hard coded x length to be 0.2
+      call cmult(zm1, 1.0/0.05, ntot)
 
       return
       end
