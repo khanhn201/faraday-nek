@@ -5,7 +5,7 @@
 #define INTP_Y 120
 #define NPTS_SLICE (INTP_X*INTP_Y)
 
-#define YHEIGHT_MAX 3.0
+#define Y_HEIGHT_MAX 3.0
 
       include "experimental/lvlSet.f"
       include "experimental/lserrors.f"
@@ -79,7 +79,7 @@ c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i)
                  exit
              endif
          enddo
-         nondimtime = omega*charl/udim*time
+         nondimtime = charl/udim*time
          nondimtime = nondimtime*omega/(2.0*pi)
          write(*,*)"Surface height", time, nondimtime, h_surface
       endif
