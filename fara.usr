@@ -5,6 +5,7 @@
 #define INTP_Y 120
 #define NPTS_SLICE (INTP_X*INTP_Y)
 
+#define YHEIGHT_MAX 3.0
 
       include "experimental/lvlSet.f"
       include "experimental/lserrors.f"
@@ -24,7 +25,7 @@ c-----------------------------------------------------------------------
       integer iwk(INTP_NMAX,3)
       real rwk(INTP_NMAX,ldim+1)
 
-      real xmax, ymax, zmax, h_surface
+      real xmax, ymax, zmax, h_surface, nondimtime
       integer npts, i
 
       integer ih
@@ -34,8 +35,14 @@ c-----------------------------------------------------------------------
       save    icalld
       data    icalld /0/
 
+      common /dimen/ Re,We,Fr,charl,udim
+      real Re, We, Fr, charl, udim
+
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
       xmax = 4.0 ! after nondimensionalization
-      ymax = 3.0
+      ymax = Y_HEIGHT_MAX
       zmax = 0.6
 
       npts = 0
@@ -72,7 +79,9 @@ c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i)
                  exit
              endif
          enddo
-         write(*,*)"Surface height", time, h_surface
+         nondimtime = omega*charl/udim*time
+         nondimtime = nondimtime*omega/(2.0*pi)
+         write(*,*)"Surface height", time, nondimtime, h_surface
       endif
 
       return
@@ -108,7 +117,7 @@ c-----------------------------------------------------------------------
       data    idump_count /0/
 
       xmax = 4.0 ! after nondimensionalization
-      ymax = 3.0
+      ymax = Y_HEIGHT_MAX
       zmax = 0.6
       npts = 0
       if (nid.eq.0) then

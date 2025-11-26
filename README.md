@@ -72,6 +72,8 @@ nekbmpi fara 8
 Running will generate `logfile`, `fara.nek5000`, and a bunch of `fara0.f*****` which contain
 the checkpoints.
 
+To get the height overtime, do `grep Surface logfile > height.dat` 
+
 # Visualization
 You can open the `fara.nek5000` file with visit or paraview. If use paraview, use `VisIt Nek5000 Reader` as the reader.
 Note the `fara.nek5000` file doesn't actually contains any data, it only points to the `fara0.f*****` checkpoint files.
