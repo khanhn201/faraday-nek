@@ -180,6 +180,7 @@ c-----------------------------------------------------------------------
       real rhol, mul, gdim, gamm
       real nul, nug
       real rhog,mug
+      real hl, hg, km, cothg, cothl
       real psi
       integer icalld
       save icalld
@@ -195,6 +196,17 @@ c-----------------------------------------------------------------------
       mug = 0.002478           ! dynamic viscosity of top layer
       charl = 0.05             ! height of the bottom layer
       gamm = 0.018             ! surface tension
+
+      hl = charl
+      hg = charl*(Y_HEIGHT_MAX-1.0)
+      km = 2*pi/0.2
+      omega = (rhol-rhog)*gdim*km + gamm*km**3
+      cothl = cosh(km*hl)/sinh(km*hl)
+      cothg = cosh(km*hg)/sinh(km*hg)
+      omega = omega/(rhol*cothl + rhog*cothg)
+      omega = sqrt(omega)*2
+      magnitude = 0.5*gdim/omega**2 ! Fig. 7
+
       udim = sqrt(gdim*charl)  ! characteristic velocity
       udim = omega*magnitude   ! could also be omega*magnitude of the excitation
 
@@ -469,6 +481,7 @@ c     if(pord.ne.1) call cut_off_filter(prext,ncut,1)
       output_phase(6) = 4.0/5.0
 
       if(nio.eq.0)then
+        write(*,*)"Excite", omega, magnitude
         write(*,*)"Phase",phase
       endif
       do i = 2,6
@@ -559,12 +572,6 @@ c-----------------------------------------------------------------------
       integer ifld_tls,ifld_tlsr
       integer ifdebug, ifixCLSbdry
       real farfield
-
-      common /excite/ omega, magnitude
-      real omega, magnitude
-
-      omega = 10.5718 ! s^-1 frequency of excitation
-      magnitude = 0.04474 ! m magnitude of excitation
 
 
       eps = 1.5/(lx1-1.0)
