@@ -11,6 +11,50 @@ c  total height = Y_HEIGHT_MAX*0.05
       include "experimental/lvlSet.f"
       include "experimental/lserrors.f"
 c-----------------------------------------------------------------------
+      subroutine initialize_par
+      implicit none
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      common /dimen/ Re,We,Fr,charl,udim
+      real Re, We, Fr, charl, udim
+
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
+      common /my_vp/ rhol,rhog,mul,mug
+      real rhol, mul, rhog,mug
+      real hl, hg, km, cothg, cothl, gdim, gamm
+
+      gdim = 9.81              ! gravity
+      rhol = 998.0             ! density of bottom layer
+      rhog = 826.0             ! density of top layer
+      mul = 0.000998           ! dynamic viscosity of bottom layer
+      mug = 0.002478           ! dynamic viscosity of top layer
+      charl = 0.05             ! height of the bottom layer
+      gamm = 0.018             ! surface tension
+
+      hl = charl
+      hg = charl*(Y_HEIGHT_MAX-1.0)
+      km = 2*pi/0.2
+      omega = (rhol-rhog)*gdim*km + gamm*km**3
+      cothl = cosh(km*hl)/sinh(km*hl)
+      cothg = cosh(km*hg)/sinh(km*hg)
+      omega = omega/(rhol*cothl + rhog*cothg)
+      omega = sqrt(omega)*2
+      magnitude = 0.5*gdim/omega**2 ! Fig. 7
+
+      udim = sqrt(gdim*charl)  ! characteristic velocity
+      udim = omega*magnitude   ! could also be omega*magnitude of the excitation
+
+      Re = rhol*udim*charl/mul
+      Fr = udim**2.0/(gdim*charl)
+      We = charl*rhol*udim**2.0/gamm
+
+      return
+      end
+c-----------------------------------------------------------------------
       subroutine my_surface_track
       implicit none
       include 'SIZE'
@@ -41,7 +85,7 @@ c-----------------------------------------------------------------------
 
       common /excite/ omega, magnitude
       real omega, magnitude
-      real xmn,xmx,ymn,ymx,zmn,zmx
+      real xmn,xmx,ymn,ymx,zmn,zmx, nondimh
 
       call domain_size(xmn,xmx,ymn,ymx,zmn,zmx)
 
@@ -81,7 +125,9 @@ c              linear interpolation between (yp(i-1), up(i-1)) and (yp(i), up(i)
          enddo
          nondimtime = charl/udim*time
          nondimtime = nondimtime*omega/(2.0*pi)
-         write(*,*)"Surface height", time, nondimtime, h_surface
+         nondimh = (h_surface-1.0)*0.05/magnitude
+         write(*,*)time, nondimtime
+     $            ,h_surface, nondimh, "Surface height"
       endif
 
       return
@@ -177,9 +223,9 @@ c-----------------------------------------------------------------------
       common /excite/ omega, magnitude
       real omega, magnitude
 
-      real rhol, mul, gdim, gamm
-      real nul, nug
-      real rhog,mug
+      common /my_vp/ rhol,rhog,mul,mug
+      real rhol, mul, rhog, mug
+
       real hl, hg, km, cothg, cothl
       real psi
       integer icalld
@@ -187,34 +233,6 @@ c-----------------------------------------------------------------------
       data icalld /0/
 
       e = gllel(eg)
-
-
-      gdim = 9.81              ! gravity
-      rhol = 998.0             ! density of bottom layer
-      rhog = 826.0             ! density of top layer
-      mul = 0.000998           ! dynamic viscosity of bottom layer
-      mug = 0.002478           ! dynamic viscosity of top layer
-      charl = 0.05             ! height of the bottom layer
-      gamm = 0.018             ! surface tension
-
-      hl = charl
-      hg = charl*(Y_HEIGHT_MAX-1.0)
-      km = 2*pi/0.2
-      omega = (rhol-rhog)*gdim*km + gamm*km**3
-      cothl = cosh(km*hl)/sinh(km*hl)
-      cothg = cosh(km*hg)/sinh(km*hg)
-      omega = omega/(rhol*cothl + rhog*cothg)
-      omega = sqrt(omega)*2
-      magnitude = 0.5*gdim/omega**2 ! Fig. 7
-
-      udim = sqrt(gdim*charl)  ! characteristic velocity
-      udim = omega*magnitude   ! could also be omega*magnitude of the excitation
-
-      nul = mul/rhol
-      nug = mug/rhog
-      Re = rhol*udim*charl/mul
-      Fr = udim**2.0/(gdim*charl)
-      We = charl*rhol*udim**2.0/gamm
 
       if(ifield.eq.1)then
         psi = t(ix,iy,iz,e,ifld_cls-1)
@@ -366,6 +384,9 @@ c-----------------------------------------------------------------------
       integer ifld_cls,ifld_clsr
       integer ifld_tls,ifld_tlsr
 
+      common /excite/ omega, magnitude
+      real omega, magnitude
+
       real blasius
 
       real xx,yy,heaviside, tx,ty, slope
@@ -381,8 +402,8 @@ c-----------------------------------------------------------------------
       xx = xm1(ix,iy,iz,e)
       yy = ym1(ix,iy,iz,e)
 
-      h_local = 1.0 - 1e-2*cos(xx/xmx*2*3.1415)     ! small initial wave
-      h_local = h_local + 1e-3*(1.0-2.0*(xx/xmx)) ! small linear perturbation to eliminate symmetry
+      h_local = 1.0 - magnitude/0.05*1e-3*cos(xx/xmx*2*3.1415)     ! small initial wave
+      h_local = h_local + magnitude/0.05*1e-4*(1.0-2.0*(xx/xmx)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
       uy = 0.0
@@ -551,6 +572,8 @@ c-----------------------------------------------------------------------
       call cmult(ym1, Y_HEIGHT_MAX, ntot) ! scale to Y_HEIGHT_MAX
       call cmult(xm1, 1.0/0.05, ntot)     ! hard coded x length to be 0.2
       call cmult(zm1, 1.0/0.05, ntot)
+
+      call initialize_par
 
       return
       end
