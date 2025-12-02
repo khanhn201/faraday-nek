@@ -294,24 +294,24 @@ c-----------------------------------------------------------------------
       fexcite = magnitude*fexcite ! m/s^2
       fexcite = charl/udim**2*fexcite ! nondimensionalize
 
-c     ffx = svvx
-c     ffy = svvy
-c     ffz = svvz 
+      ffx = svvx
+      ffy = svvy
+      ffz = svvz 
 
-c     abfx(ix,iy,iz,e) = sfx
-c     abfy(ix,iy,iz,e) = sfy + vtrans(ix,iy,iz,e,1)*(-1./Fr + fexcite) 
-c     abfz(ix,iy,iz,e) = sfz
+      abfx(ix,iy,iz,e) = sfx
+      abfy(ix,iy,iz,e) = sfy + vtrans(ix,iy,iz,e,1)*(-1./Fr + fexcite) 
+      abfz(ix,iy,iz,e) = sfz
 
-      sfx = sfx/vtrans(ix,iy,iz,e,1)
-      sfy = sfy/vtrans(ix,iy,iz,e,1)
-      sfz = sfz/vtrans(ix,iy,iz,e,1)
+c     sfx = sfx/vtrans(ix,iy,iz,e,1)
+c     sfy = sfy/vtrans(ix,iy,iz,e,1)
+c     sfz = sfz/vtrans(ix,iy,iz,e,1)
 
-      ffx = svvx + sfx
-      ffy = svvy + sfy -1./Fr + fexcite 
-      ffz = svvz + sfz 
-      abfx(ix,iy,iz,e) = 0.0
-      abfy(ix,iy,iz,e) = 0.0
-      abfz(ix,iy,iz,e) = 0.0
+c     ffx = svvx + sfx
+c     ffy = svvy + sfy -1./Fr + fexcite 
+c     ffz = svvz + sfz 
+c     abfx(ix,iy,iz,e) = 0.0
+c     abfy(ix,iy,iz,e) = 0.0
+c     abfz(ix,iy,iz,e) = 0.0
 
       return
       end
@@ -402,7 +402,7 @@ c-----------------------------------------------------------------------
       xx = xm1(ix,iy,iz,e)
       yy = ym1(ix,iy,iz,e)
 
-      h_local = 1.0 - magnitude/0.05*1e-3*cos(xx/xmx*2*3.1415)     ! small initial wave
+      h_local = 1.0 - magnitude/0.05*1e-2*cos(xx/xmx*2*3.1415)     ! small initial wave
       h_local = h_local + magnitude/0.05*1e-4*(1.0-2.0*(xx/xmx)) ! small linear perturbation to eliminate symmetry
 
       ux = 0.0
@@ -463,7 +463,9 @@ c-----------------------------------------------------------------------
 
       ntot = lx1*ly1*lz1*nelv
 
-      call my_surface_track
+      if(mod(istep,10).eq.0)then
+        call my_surface_track
+      endif
       if(istep.eq.0)then
         call copy(psiini,t(1,1,1,1,ifld_cls-1),ntot)
         call copy(exact,t(1,1,1,1,ifld_tls-1),ntot)
